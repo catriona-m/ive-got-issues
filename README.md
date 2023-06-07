@@ -23,7 +23,7 @@ Add a comment to any issue that has the input labels attached to it:
 ivegotissues addComment --gh-owner "catriona-m" --gh-repo "ivegotissues" --labels-filter "v2" --state "open" --comment "It looks like you are using a legacy version, please consider upgrading to 3.x.x"
 ```
 
-##Notes
+## Notes
 
 - The --dry-run flag is `true` by default - to make actual changes to issues you need to explicitly set --dry-run=false
 - A Github access token is required to make the requests and is set via the environment variable `IGI_GITHUB_TOKEN`
