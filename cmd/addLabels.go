@@ -20,7 +20,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		println("Running add labels...")
+		fmt.Println("Running addLabels...")
 
 		// TODO allow everything to be set via env var or config file too
 		// TODO validate - can cobra do this for us?
@@ -49,7 +49,7 @@ to quickly create a Cobra application.`,
 
 		err := al.AddLabelsToIssues()
 		if err != nil {
-			fmt.Errorf("running AddLabels: %v", err)
+			fmt.Errorf("running addLabels: %v", err)
 		}
 
 	},

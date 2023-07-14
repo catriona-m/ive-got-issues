@@ -23,10 +23,16 @@ func (ac AddComment) AddComment() error {
 	repo := gh.NewRepo(ac.Owner, ac.Repo, ac.Token)
 
 	if len(ac.Issues) > 0 {
-		ac.addCommentToIssueList(repo)
+		err := ac.addCommentToIssueList(repo)
+		if err != nil {
+			return err
+		}
 
 	} else if len(ac.LabelsFilter) > 0 {
-		ac.addCommentToIssuesFilteredByLabels(repo)
+		err := ac.addCommentToIssuesFilteredByLabels(repo)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

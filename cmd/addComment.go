@@ -19,7 +19,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		println("Running add comment...")
+		fmt.Println("Running addComment...")
 
 		// TODO allow everything to be set via env var or config file too
 		// TODO validate - can cobra do this for us?
@@ -48,7 +48,7 @@ to quickly create a Cobra application.`,
 
 		err := ac.AddComment()
 		if err != nil {
-			fmt.Errorf("running AddComment: %v", err)
+			fmt.Errorf("running addComment: %v", err)
 		}
 	},
 }

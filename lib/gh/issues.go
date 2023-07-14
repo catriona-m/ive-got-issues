@@ -44,3 +44,27 @@ func (r Repo) AddCommentToIssue(comment string, issueNumber int) error {
 	}
 	return nil
 }
+
+func (r Repo) ListIssueTimeline(issueNumber int) ([]*github.Timeline, error) {
+	client := r.NewClient()
+	timelines := make([]*github.Timeline, 0)
+
+	opts := github.ListOptions{
+		Page:    1,
+		PerPage: 100,
+	}
+	for {
+		timeline, resp, err := client.Issues.ListIssueTimeline(context.Background(), r.Owner, r.Name, issueNumber, &opts)
+		if err != nil {
+			return nil, fmt.Errorf("requesting timeline for issue %d : %v", issueNumber, err)
+		}
+		timelines = append(timelines, timeline...)
+
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+
+	}
+	return timelines, nil
+}
