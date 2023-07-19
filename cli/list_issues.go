@@ -1,4 +1,4 @@
-package app
+package cli
 
 import (
 	"fmt"
@@ -11,24 +11,24 @@ import (
 )
 
 type ListIssues struct {
-	LabelsFilter  []string
-	ContentFilter string
-	IssueState    string
-	LinkedPrs     bool
-	PrState       string
-	BrowseIssues  bool
-	BrowsePrs     bool
-	Batch         int
-	Owner         string
-	Token         string
-	Repo          string
+	Labels     []string
+	Content    string
+	IssueState string
+	LinkedPrs  bool
+	PrState    string
+	OpenIssues bool
+	OpenPrs    bool
+	Batch      int
+	Owner      string
+	Token      string
+	Repo       string
 }
 
 func (li ListIssues) ListIssues() error {
 
 	opts := github.IssueListByRepoOptions{
 		State:  li.IssueState,
-		Labels: li.LabelsFilter,
+		Labels: li.Labels,
 		ListOptions: github.ListOptions{
 			PerPage: 100,
 			Page:    1,
@@ -36,20 +36,34 @@ func (li ListIssues) ListIssues() error {
 	}
 
 	repo := gh.NewRepo(li.Owner, li.Repo, li.Token)
-
+	issueCount := 0
+	totalIssuesCount := 0
+	batchCounter := 1
+	var continueListing bool
 	for {
 
 		issues, nextPage, err := repo.ListIssuesByRepo(opts)
 		if err != nil {
 			return fmt.Errorf("retrieving issues from github from page %d: %v", opts.ListOptions.Page, err)
 		}
-		continueProcessing, err := li.listFilteredIssues(repo, issues)
+		continueListing, issueCount, err = li.listFilteredIssues(repo, issues, batchCounter)
 		if err != nil {
 			return err
 		}
 
-		if !continueProcessing || nextPage == 0 {
-			fmt.Println("Finished listing issues.")
+		totalIssuesCount += issueCount
+
+		if li.Batch > 0 && totalIssuesCount+1 >= li.Batch {
+			batchCounter = (totalIssuesCount + 1) % li.Batch
+			if batchCounter == 0 {
+				batchCounter = li.Batch
+			}
+		} else {
+			batchCounter = totalIssuesCount + 1
+		}
+
+		if !continueListing || nextPage == 0 {
+			fmt.Printf("Finished listing %d issues.\n", totalIssuesCount)
 			break
 		}
 		opts.ListOptions.Page = nextPage
@@ -58,16 +72,16 @@ func (li ListIssues) ListIssues() error {
 	return nil
 }
 
-func (li ListIssues) listFilteredIssues(repo gh.Repo, issues []*github.Issue) (bool, error) {
+func (li ListIssues) listFilteredIssues(repo gh.Repo, issues []*github.Issue, batchCounter int) (bool, int, error) {
 
-	counter := 1
 	var err error
+	issuesCount := 0
 
 	re := &regexp.Regexp{}
-	if li.ContentFilter != "" {
-		re, err = regexp.Compile(li.ContentFilter)
+	if li.Content != "" {
+		re, err = regexp.Compile(li.Content)
 		if err != nil {
-			return false, err
+			return false, 0, err
 		}
 	}
 
@@ -76,7 +90,7 @@ func (li ListIssues) listFilteredIssues(repo gh.Repo, issues []*github.Issue) (b
 			continue
 		}
 
-		if li.ContentFilter != "" {
+		if li.Content != "" {
 			if !re.MatchString(issue.GetBody()) {
 				continue
 			}
@@ -86,7 +100,7 @@ func (li ListIssues) listFilteredIssues(repo gh.Repo, issues []*github.Issue) (b
 		if li.LinkedPrs {
 			prs, err = crossReferencedPRs(repo, issue.GetNumber(), li.PrState)
 			if err != nil {
-				return false, err
+				return false, issuesCount, err
 			}
 			if len(prs) == 0 {
 				continue
@@ -94,8 +108,9 @@ func (li ListIssues) listFilteredIssues(repo gh.Repo, issues []*github.Issue) (b
 		}
 
 		fmt.Printf("Issue: %d\t%s\t%s\n", issue.GetNumber(), issue.GetHTMLURL(), issue.GetTitle())
+		issuesCount++
 
-		if li.BrowseIssues {
+		if li.OpenIssues {
 			if err := browser.OpenURL(issue.GetHTMLURL()); err != nil {
 				fmt.Printf("failed to open issue %s in browser", issue.GetHTMLURL())
 			}
@@ -104,7 +119,7 @@ func (li ListIssues) listFilteredIssues(repo gh.Repo, issues []*github.Issue) (b
 		if li.LinkedPrs {
 			for url, pr := range prs {
 				fmt.Println(pr)
-				if li.BrowsePrs {
+				if li.OpenPrs {
 					if err := browser.OpenURL(url); err != nil {
 						fmt.Printf("failed to open PR %s in browser", url)
 					}
@@ -113,19 +128,19 @@ func (li ListIssues) listFilteredIssues(repo gh.Repo, issues []*github.Issue) (b
 		}
 
 		if li.Batch > 0 {
-			if counter == li.Batch {
+			if batchCounter == li.Batch {
 				continueListing := prompter.YN("Do you want to continue listing issues?", true)
 				if !continueListing {
-					return false, nil
+					return false, issuesCount, nil
 				}
-				counter = 1
+				batchCounter = 1
 				continue
 			}
-			counter++
+			batchCounter++
 		}
 	}
 
-	return true, nil
+	return true, issuesCount, nil
 }
 
 func crossReferencedPRs(repo gh.Repo, issueNumber int, prState string) (map[string]string, error) {

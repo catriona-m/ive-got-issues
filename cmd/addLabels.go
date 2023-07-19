@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/ivegotissues/app"
+
+	"github.com/ivegotissues/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -25,10 +26,12 @@ to quickly create a Cobra application.`,
 		// TODO allow everything to be set via env var or config file too
 		// TODO validate - can cobra do this for us?
 		labels, _ := cmd.Flags().GetStringSlice("labels")
-		contentMatches, _ := cmd.Flags().GetString("content-matches")
+		content, _ := cmd.Flags().GetString("content")
 		state, _ := cmd.Flags().GetString("state")
 		issues, _ := cmd.Flags().GetIntSlice("issues")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		openIssues, _ := cmd.Flags().GetBool("open-issues")
+		batch, _ := cmd.Flags().GetInt("batch")
 		owner, _ := cmd.Flags().GetString("gh-owner")
 		repo, _ := cmd.Flags().GetString("gh-repo")
 
@@ -36,15 +39,17 @@ to quickly create a Cobra application.`,
 		viper.AutomaticEnv()
 		token := viper.GetString("IGI_GITHUB_TOKEN")
 
-		al := app.AddLabels{
-			Labels:         labels,
-			ContentMatches: contentMatches,
-			State:          state,
-			Issues:         issues,
-			Owner:          owner,
-			Token:          token,
-			Repo:           repo,
-			DryRun:         dryRun,
+		al := cli.AddLabels{
+			Labels:     labels,
+			Content:    content,
+			State:      state,
+			Issues:     issues,
+			Batch:      batch,
+			OpenIssues: openIssues,
+			Owner:      owner,
+			Token:      token,
+			Repo:       repo,
+			DryRun:     dryRun,
 		}
 
 		err := al.AddLabelsToIssues()
@@ -56,19 +61,21 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
+
 	rootCmd.AddCommand(addLabelsCmd)
 	addLabelsCmd.Flags().StringSliceP("labels", "l", []string{}, "Labels to add")
-	addLabelsCmd.Flags().StringP("content-matches", "m", "", "Filter which issues to add labels to based on whether the content body matches input string. Cannot be used if using issues flag")
+	addLabelsCmd.Flags().StringP("content", "m", "", "Filter which issues to add labels to based on whether the content body matches input string. Cannot be used if using issues flag")
 	addLabelsCmd.Flags().StringP("state", "s", "", "Filter which issues based on state. Possible values are 'open', 'closed' and 'all'")
-	addLabelsCmd.Flags().IntSliceP("issues", "i", []int{}, "List of issue numbers to add labels to. Cannot be used if using content-matches")
+	addLabelsCmd.Flags().IntSliceP("issues", "i", []int{}, "List of issue numbers to add labels to. Cannot be used if using content")
 	addLabelsCmd.Flags().BoolP("dry-run", "d", true, "Print to console a simulation of what is expected to happen without making any actual changes to the issues. Defaults to true.")
+	addLabelsCmd.Flags().BoolP("open-issues", "", false, "Open a browser tab for each issue labeled. Defaults to false.")
+	addLabelsCmd.Flags().IntP("batch", "b", 0, "Specify a number of issues to label at a time. If set to 0, all issues are labeled in one go. This setting is recommended when using open-issues. Defaults to 0.")
 	addLabelsCmd.Flags().StringP("gh-owner", "", "", "The name of the github owner")
 	addLabelsCmd.Flags().StringP("gh-repo", "", "", "The name of the github repo")
 
 	addLabelsCmd.MarkFlagRequired("labels")
-	addLabelsCmd.MarkFlagRequired("state")
 	addLabelsCmd.MarkFlagRequired("gh-owner")
 	addLabelsCmd.MarkFlagRequired("gh-repo")
-	addLabelsCmd.MarkFlagsMutuallyExclusive("content-matches", "issues")
+	addLabelsCmd.MarkFlagsMutuallyExclusive("content", "issues")
 
 }

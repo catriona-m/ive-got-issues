@@ -1,4 +1,4 @@
-package app
+package cli
 
 import (
 	"fmt"
@@ -8,14 +8,16 @@ import (
 )
 
 type AddComment struct {
-	LabelsFilter []string
-	State        string
-	Issues       []int
-	Owner        string
-	Comment      string
-	Token        string
-	Repo         string
-	DryRun       bool
+	Labels     []string
+	State      string
+	Issues     []int
+	Owner      string
+	Comment    string
+	Batch      int
+	OpenIssues bool
+	Token      string
+	Repo       string
+	DryRun     bool
 }
 
 func (ac AddComment) AddComment() error {
@@ -28,7 +30,7 @@ func (ac AddComment) AddComment() error {
 			return err
 		}
 
-	} else if len(ac.LabelsFilter) > 0 {
+	} else if len(ac.Labels) > 0 {
 		err := ac.addCommentToIssuesFilteredByLabels(repo)
 		if err != nil {
 			return err
@@ -42,7 +44,7 @@ func (ac AddComment) addCommentToIssuesFilteredByLabels(repo gh.Repo) error {
 
 	opts := github.IssueListByRepoOptions{
 		State:  ac.State,
-		Labels: ac.LabelsFilter,
+		Labels: ac.Labels,
 		ListOptions: github.ListOptions{
 			PerPage: 100,
 			Page:    1,

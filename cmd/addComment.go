@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/ivegotissues/app"
+	"github.com/ivegotissues/cli"
 	"github.com/spf13/viper"
 
 	"github.com/spf13/cobra"
@@ -23,11 +23,13 @@ to quickly create a Cobra application.`,
 
 		// TODO allow everything to be set via env var or config file too
 		// TODO validate - can cobra do this for us?
-		labelsFilter, _ := cmd.Flags().GetStringSlice("labels-filter")
+		labels, _ := cmd.Flags().GetStringSlice("labels")
 		comment, _ := cmd.Flags().GetString("comment")
 		state, _ := cmd.Flags().GetString("state")
 		issues, _ := cmd.Flags().GetIntSlice("issues")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		openIssues, _ := cmd.Flags().GetBool("open-issues")
+		batch, _ := cmd.Flags().GetInt("batch")
 		owner, _ := cmd.Flags().GetString("gh-owner")
 		repo, _ := cmd.Flags().GetString("gh-repo")
 
@@ -35,15 +37,17 @@ to quickly create a Cobra application.`,
 		viper.AutomaticEnv()
 		token := viper.GetString("IGI_GITHUB_TOKEN")
 
-		ac := app.AddComment{
-			LabelsFilter: labelsFilter,
-			State:        state,
-			Issues:       issues,
-			Owner:        owner,
-			Comment:      comment,
-			Token:        token,
-			Repo:         repo,
-			DryRun:       dryRun,
+		ac := cli.AddComment{
+			Labels:     labels,
+			State:      state,
+			Issues:     issues,
+			Batch:      batch,
+			OpenIssues: openIssues,
+			Owner:      owner,
+			Comment:    comment,
+			Token:      token,
+			Repo:       repo,
+			DryRun:     dryRun,
 		}
 
 		err := ac.AddComment()
@@ -56,11 +60,13 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(addCommentCmd)
 
-	addCommentCmd.Flags().StringSliceP("labels-filter", "l", []string{}, "Filters issues to comment on if they contain the specified labels. Cannot be used if using issues flag")
+	addCommentCmd.Flags().StringSliceP("labels", "l", []string{}, "Filters issues to comment on if they contain the specified labels. Cannot be used if using issues flag")
 	addCommentCmd.Flags().StringP("state", "s", "", "Filter which issues based on state. Possible values are 'open', 'closed' and 'all'")
-	addCommentCmd.Flags().IntSliceP("issues", "i", []int{}, "List of issue numbers to add labels to. Cannot be used if using labels-filter flag")
+	addCommentCmd.Flags().IntSliceP("issues", "i", []int{}, "List of issue numbers to add labels to. Cannot be used if using labels flag")
 	addCommentCmd.Flags().StringP("comment", "c", "", "Comment to add to issues")
 	addCommentCmd.Flags().BoolP("dry-run", "d", true, "Print to console a simulation of what is expected to happen without making any actual changes to the issues. Defaults to true.")
+	addCommentCmd.Flags().BoolP("open-issues", "", false, "Open a browser tab for each issue commented. Defaults to false.")
+	addCommentCmd.Flags().IntP("batch", "b", 0, "Specify a number of issues to comment at a time. If set to 0, all issues are commented in one go. This setting is recommended when using open-issues. Defaults to 0.")
 	addCommentCmd.Flags().StringP("gh-owner", "", "", "The name of the github owner")
 	addCommentCmd.Flags().StringP("gh-repo", "", "", "The name of the github repo")
 
@@ -68,6 +74,6 @@ func init() {
 	addCommentCmd.MarkFlagRequired("gh-owner")
 	addCommentCmd.MarkFlagRequired("gh-repo")
 	addCommentCmd.MarkFlagRequired("comment")
-	addCommentCmd.MarkFlagsMutuallyExclusive("labels-filter", "issues")
+	addCommentCmd.MarkFlagsMutuallyExclusive("labels", "issues")
 
 }
