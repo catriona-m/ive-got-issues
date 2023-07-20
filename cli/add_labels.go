@@ -23,6 +23,8 @@ type AddLabels struct {
 	DryRun     bool
 }
 
+const githubUrl = "https://github.com/"
+
 func (al AddLabels) AddLabelsToIssues() error {
 
 	repo := gh.NewRepo(al.Owner, al.Repo, al.Token)
@@ -140,7 +142,27 @@ func (al AddLabels) labelIssues(repo gh.Repo) (int, error) {
 			if err != nil {
 				return issueCounter, err
 			}
-			issueCounter++
+		}
+
+		issueCounter++
+
+		if al.OpenIssues {
+			url := fmt.Sprintf("%s%s/%s/issues/%d", githubUrl, repo.Owner, repo.Name, issue)
+			if err := browser.OpenURL(url); err != nil {
+				fmt.Printf("failed to open issue %s in browser", url)
+			}
+		}
+
+		if al.Batch > 0 {
+			if issueCounter >= al.Batch {
+				if issueCounter%al.Batch == 0 {
+					continueListing := prompter.YN("Do you want to continue labelling issues?", true)
+					if !continueListing {
+						return issueCounter, nil
+					}
+					continue
+				}
+			}
 		}
 	}
 	return issueCounter, nil
