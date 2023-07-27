@@ -3,9 +3,11 @@ package cli
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/Songmu/prompter"
 	"github.com/google/go-github/v52/github"
+	c "github.com/gookit/color"
 	"github.com/ivegotissues/lib/gh"
 	"github.com/pkg/browser"
 )
@@ -19,7 +21,6 @@ type ListIssues struct {
 	OpenIssues bool
 	OpenPrs    bool
 	Batch      int
-	Owner      string
 	Token      string
 	Repo       string
 }
@@ -27,15 +28,18 @@ type ListIssues struct {
 func (li ListIssues) ListIssues() error {
 
 	opts := github.IssueListByRepoOptions{
-		State:  li.IssueState,
-		Labels: li.Labels,
+		State: li.IssueState,
 		ListOptions: github.ListOptions{
 			PerPage: 100,
 			Page:    1,
 		},
 	}
 
-	repo := gh.NewRepo(li.Owner, li.Repo, li.Token)
+	if len(li.Labels) > 0 {
+		opts.Labels = li.Labels
+	}
+
+	repo := gh.NewRepo(li.Repo, li.Token)
 	issueCount := 0
 	totalIssuesCount := 0
 	batchCounter := 1
@@ -63,7 +67,7 @@ func (li ListIssues) ListIssues() error {
 		}
 
 		if !continueListing || nextPage == 0 {
-			fmt.Printf("Finished listing %d issues.\n", totalIssuesCount)
+			c.Info.Printf("Finished listing %d issues.\n", totalIssuesCount)
 			break
 		}
 		opts.ListOptions.Page = nextPage
@@ -107,7 +111,8 @@ func (li ListIssues) listFilteredIssues(repo gh.Repo, issues []*github.Issue, ba
 			}
 		}
 
-		fmt.Printf("Issue: %d\t%s\t%s\n", issue.GetNumber(), issue.GetHTMLURL(), issue.GetTitle())
+		date := strings.Split(issue.GetCreatedAt().String(), " ")[0]
+		c.Printf("\n<cyan>#%d</> @ <green>%s</>\t%s\t%s\n", issue.GetNumber(), date, issue.GetTitle(), issue.GetHTMLURL())
 		issuesCount++
 
 		if li.OpenIssues {
@@ -118,7 +123,7 @@ func (li ListIssues) listFilteredIssues(repo gh.Repo, issues []*github.Issue, ba
 
 		if li.LinkedPrs {
 			for url, pr := range prs {
-				fmt.Println(pr)
+				c.Println(pr)
 				if li.OpenPrs {
 					if err := browser.OpenURL(url); err != nil {
 						fmt.Printf("failed to open PR %s in browser", url)
@@ -156,28 +161,39 @@ func crossReferencedPRs(repo gh.Repo, issueNumber int, prState string) (map[stri
 			if source := timeline.GetSource(); source != nil {
 				if issue := source.GetIssue(); issue != nil {
 					if issue.IsPullRequest() {
-						if prState != "" {
-							if prState == "merged" {
-								merged, err := repo.PullRequestIsMerged(issue.GetNumber())
-								if err != nil {
-									return nil, err
-								}
-								if !merged {
+						colour := ""
+
+						switch issue.GetState() {
+						case "open":
+							if prState == "open" || prState == "" {
+								colour = "<lightGreen>"
+							} else {
+								continue
+							}
+
+						case "closed":
+							if prState != "" && prState != "merged" && prState != "closed" {
+								continue
+							}
+							merged, err := repo.PullRequestIsMerged(issue.GetNumber())
+							if err != nil {
+								return nil, err
+							}
+							if merged {
+								if prState == "" || prState == "merged" {
+									colour = "<lightMagenta>"
+								} else {
 									continue
 								}
-							} else if prState == "open" {
-								if issue.GetState() != "open" {
-									continue
-								}
-							} else if prState == "closed" {
-								if issue.GetState() != "closed" {
-									continue
-								}
+							} else if prState == "" || prState == "closed" {
+								colour = "<lightRed>"
+							} else {
+								continue
 							}
 						}
 
 						if issue.GetHTMLURL() != "" {
-							pr := fmt.Sprintf("\t- PR: %d\t%s\t%s", issue.GetNumber(), issue.GetHTMLURL(), issue.GetTitle())
+							pr := c.Sprintf("\t%s#%d\t%s\t%s</>", colour, issue.GetNumber(), issue.GetTitle(), issue.GetHTMLURL())
 							prs[issue.GetHTMLURL()] = pr
 						}
 					}

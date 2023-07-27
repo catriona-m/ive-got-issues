@@ -6,6 +6,7 @@ import (
 
 	"github.com/Songmu/prompter"
 	"github.com/google/go-github/v52/github"
+	c "github.com/gookit/color"
 	"github.com/ivegotissues/lib/gh"
 	"github.com/pkg/browser"
 )
@@ -17,7 +18,6 @@ type AddLabels struct {
 	Issues     []int
 	OpenIssues bool
 	Batch      int
-	Owner      string
 	Token      string
 	Repo       string
 	DryRun     bool
@@ -27,14 +27,14 @@ const githubUrl = "https://github.com/"
 
 func (al AddLabels) AddLabelsToIssues() error {
 
-	repo := gh.NewRepo(al.Owner, al.Repo, al.Token)
+	repo := gh.NewRepo(al.Repo, al.Token)
 
 	if len(al.Issues) > 0 {
 		counter, err := al.labelIssues(repo)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Finished labelling %d issues", counter)
+		c.Info.Printf("Finished labelling %d issues", counter)
 	} else if al.Content != "" {
 
 		opts := github.IssueListByRepoOptions{
@@ -71,7 +71,7 @@ func (al AddLabels) AddLabelsToIssues() error {
 				batchCounter = totalIssuesCount + 1
 			}
 			if !continueLabelling || nextPage == 0 {
-				fmt.Printf("Finished labelling %d issues", totalIssuesCount)
+				c.Info.Printf("Finished labelling %d issues", totalIssuesCount)
 				break
 			}
 			opts.ListOptions.Page = nextPage
@@ -94,38 +94,37 @@ func (al AddLabels) labelIssuesFilteredByBodyContent(repo gh.Repo, issues []*git
 		if issue.IsPullRequest() {
 			continue
 		}
-		if issue.Body != nil {
-			if re.MatchString(issue.GetBody()) {
 
-				// skip this one if the issue already has the labels added
-				if !hasLabels(issue.Labels, al.Labels) {
-					fmt.Printf("Adding labels %v to issue: %d\t%s\t%s\n", al.Labels, issue.GetNumber(), issue.GetHTMLURL(), issue.GetTitle())
-					if !al.DryRun {
-						err = repo.AddLabelsToIssue(al.Labels, issue.GetNumber())
-						if err != nil {
+		if re.MatchString(issue.GetBody()) {
+
+			// skip this one if the issue already has the labels added
+			if !hasLabels(issue.Labels, al.Labels) {
+				c.Printf("Adding labels <magenta>%v</> to issue: <cyan>%d</>\t%s\t%s\n", al.Labels, issue.GetNumber(), issue.GetHTMLURL(), issue.GetTitle())
+				if !al.DryRun {
+					err = repo.AddLabelsToIssue(al.Labels, issue.GetNumber())
+					if err != nil {
+						return false, issueCounter, nil
+					}
+				}
+
+				issueCounter++
+
+				if al.OpenIssues {
+					if err := browser.OpenURL(issue.GetHTMLURL()); err != nil {
+						c.Error.Printf("failed to open issue %s in browser: %v", issue.GetHTMLURL(), err)
+					}
+				}
+
+				if al.Batch > 0 {
+					if batchCounter == al.Batch {
+						continueListing := prompter.YN("Do you want to continue labelling issues?", true)
+						if !continueListing {
 							return false, issueCounter, nil
 						}
+						batchCounter = 1
+						continue
 					}
-
-					issueCounter++
-
-					if al.OpenIssues {
-						if err := browser.OpenURL(issue.GetHTMLURL()); err != nil {
-							fmt.Printf("failed to open issue %s in browser", issue.GetHTMLURL())
-						}
-					}
-
-					if al.Batch > 0 {
-						if batchCounter == al.Batch {
-							continueListing := prompter.YN("Do you want to continue labelling issues?", true)
-							if !continueListing {
-								return false, issueCounter, nil
-							}
-							batchCounter = 1
-							continue
-						}
-						batchCounter++
-					}
+					batchCounter++
 				}
 			}
 		}
@@ -136,7 +135,7 @@ func (al AddLabels) labelIssuesFilteredByBodyContent(repo gh.Repo, issues []*git
 func (al AddLabels) labelIssues(repo gh.Repo) (int, error) {
 	issueCounter := 0
 	for _, issue := range al.Issues {
-		fmt.Printf("Adding labels %v to issue: %d\n", al.Labels, issue)
+		c.Printf("Adding labels <magenta>%v</> to issue: <cyan>#%d</>\n", al.Labels, issue)
 		if !al.DryRun {
 			err := repo.AddLabelsToIssue(al.Labels, issue)
 			if err != nil {
@@ -149,14 +148,15 @@ func (al AddLabels) labelIssues(repo gh.Repo) (int, error) {
 		if al.OpenIssues {
 			url := fmt.Sprintf("%s%s/%s/issues/%d", githubUrl, repo.Owner, repo.Name, issue)
 			if err := browser.OpenURL(url); err != nil {
-				fmt.Printf("failed to open issue %s in browser", url)
+				c.Error.Printf("failed to open issue %s in browser", url)
 			}
 		}
 
 		if al.Batch > 0 {
 			if issueCounter >= al.Batch {
 				if issueCounter%al.Batch == 0 {
-					continueListing := prompter.YN("Do you want to continue labelling issues?", true)
+					msg := c.Sprintf("<green>Do you want to continue labelling issues?</>")
+					continueListing := prompter.YN(msg, true)
 					if !continueListing {
 						return issueCounter, nil
 					}

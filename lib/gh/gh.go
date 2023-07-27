@@ -2,9 +2,13 @@ package gh
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/google/go-github/v52/github"
 	"github.com/gregjones/httpcache"
+	"github.com/gregjones/httpcache/diskcache"
 	"golang.org/x/oauth2"
 )
 
@@ -18,10 +22,11 @@ type Repo struct {
 	Token
 }
 
-func NewRepo(owner, repo, token string) Repo {
+func NewRepo(repo, token string) Repo {
+	repoName := strings.Split(repo, "/")
 	r := Repo{
-		Owner: owner,
-		Name:  repo,
+		Owner: repoName[0],
+		Name:  repoName[1],
 		Token: Token{
 			Token: nil,
 		},
@@ -36,9 +41,12 @@ func NewRepo(owner, repo, token string) Repo {
 
 func (t Token) NewClient() *github.Client {
 
+	userCacheDir, _ := os.UserCacheDir()
+	cache := diskcache.New(filepath.Join(userCacheDir, "gotIssuesCache"))
+
 	tc := &http.Client{
 		Transport: &oauth2.Transport{
-			Base: httpcache.NewMemoryCacheTransport(),
+			Base: httpcache.NewTransport(cache),
 		},
 	}
 
@@ -48,7 +56,7 @@ func (t Token) NewClient() *github.Client {
 		)
 		tc = &http.Client{
 			Transport: &oauth2.Transport{
-				Base:   httpcache.NewMemoryCacheTransport(),
+				Base:   httpcache.NewTransport(cache),
 				Source: ts,
 			},
 		}
