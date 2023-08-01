@@ -175,10 +175,23 @@ func crossReferencedPRs(repo gh.Repo, issueNumber int, prState string) (map[stri
 							if prState != "" && prState != "merged" && prState != "closed" {
 								continue
 							}
-							merged, err := repo.PullRequestIsMerged(issue.GetNumber())
-							if err != nil {
-								return nil, err
+							var merged bool
+							if issue.GetRepository().GetFullName() == fmt.Sprintf("%s/%s", repo.Name, repo.Owner) {
+								merged, err = repo.PullRequestIsMerged(issue.GetNumber())
+								if err != nil {
+									return nil, err
+								}
+							} else {
+								// pr is not in the same repo as the issue
+								if repo.Token.Token != nil {
+									r := gh.NewRepo(issue.GetRepository().GetFullName(), *repo.Token.Token)
+									merged, err = r.PullRequestIsMerged(issue.GetNumber())
+									if err != nil {
+										return nil, err
+									}
+								}
 							}
+
 							if merged {
 								if prState == "" || prState == "merged" {
 									colour = "<lightMagenta>"
