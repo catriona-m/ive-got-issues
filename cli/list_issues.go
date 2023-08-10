@@ -8,7 +8,7 @@ import (
 	"github.com/Songmu/prompter"
 	"github.com/google/go-github/v52/github"
 	c "github.com/gookit/color"
-	"github.com/ivegotissues/lib/gh"
+	"github.com/ive-got-issues/lib/gh"
 	"github.com/pkg/browser"
 )
 
@@ -26,6 +26,8 @@ type ListIssues struct {
 }
 
 func (li ListIssues) ListIssues() error {
+
+	c.Info.Printf("Finding matching issues to list in %s\n", li.Repo)
 
 	opts := github.IssueListByRepoOptions{
 		State: li.IssueState,

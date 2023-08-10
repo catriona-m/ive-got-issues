@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"github.com/Songmu/prompter"
 	c "github.com/gookit/color"
-	"github.com/ivegotissues/cli"
+	"github.com/ive-got-issues/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"os"
 )
 
 var commentCmd = &cobra.Command{
@@ -13,7 +15,7 @@ var commentCmd = &cobra.Command{
 	Short: "Comment on issues",
 	Long:  `Add a comment to all issues in a specified repo that match input filters such as state and labels.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c.Info.Printf("Running comment...")
+		c.Info.Printf("Running comment...\n")
 
 		// TODO allow everything to be set via env var or config file too
 		// TODO validate - can cobra do this for us?
@@ -29,6 +31,24 @@ var commentCmd = &cobra.Command{
 		// env vars
 		viper.AutomaticEnv()
 		token := viper.GetString("IGI_GITHUB_TOKEN")
+		if token == "" {
+			c.Error.Printf("Missing required environment variable `IGI_GITHUB_TOKEN`")
+			os.Exit(1)
+		}
+
+		if dryRun {
+			c.Info.Println("This is a dry-run only - to make actual comments on issues please use --dry-run=false")
+		} else {
+			c.Warn.Println("This is NOT a dry-run - actual comments will be added to issues")
+		}
+
+		if openIssues && batch == 0 {
+			c.Warn.Println("A browser tab will be opened for each issue without prompting. Use --batch to only open a specified number at a time")
+			continueWithoutBatch := prompter.YN("Do you want to continue without --batch?", false)
+			if !continueWithoutBatch {
+				os.Exit(0)
+			}
+		}
 
 		ac := cli.AddComment{
 			Labels:     labels,
@@ -45,6 +65,7 @@ var commentCmd = &cobra.Command{
 		err := ac.AddComment()
 		if err != nil {
 			c.Error.Printf("running comment: %v", err)
+			os.Exit(1)
 		}
 	},
 }

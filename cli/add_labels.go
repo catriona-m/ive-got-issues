@@ -7,7 +7,7 @@ import (
 	"github.com/Songmu/prompter"
 	"github.com/google/go-github/v52/github"
 	c "github.com/gookit/color"
-	"github.com/ivegotissues/lib/gh"
+	"github.com/ive-got-issues/lib/gh"
 	"github.com/pkg/browser"
 )
 
@@ -37,6 +37,7 @@ func (al AddLabels) AddLabelsToIssues() error {
 		c.Info.Printf("Finished labelling %d issues", counter)
 	} else if al.Content != "" {
 
+		c.Info.Printf("Finding matching issues to label in %s", al.Repo)
 		opts := github.IssueListByRepoOptions{
 			State: al.State,
 			ListOptions: github.ListOptions{

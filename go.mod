@@ -1,4 +1,4 @@
-module github.com/ivegotissues
+module github.com/ive-got-issues
 
 go 1.19
 

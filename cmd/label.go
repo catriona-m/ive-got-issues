@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"github.com/Songmu/prompter"
 	c "github.com/gookit/color"
-	"github.com/ivegotissues/cli"
+	"github.com/ive-got-issues/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"os"
 )
 
 // labelCmd represents the addLabels command
@@ -30,6 +32,24 @@ var labelCmd = &cobra.Command{
 		// env vars
 		viper.AutomaticEnv()
 		token := viper.GetString("IGI_GITHUB_TOKEN")
+		if token == "" {
+			c.Error.Printf("Missing required environment variable `IGI_GITHUB_TOKEN`")
+			os.Exit(1)
+		}
+
+		if dryRun {
+			c.Info.Println("This is a dry-run only - to actually add labels on the issues please use --dry-run=false")
+		} else {
+			c.Warn.Println("This is NOT a dry-run - actual labels will be added to issues")
+		}
+
+		if openIssues && batch == 0 {
+			c.Warn.Println("A browser tab will be opened for each issue without prompting. Use --batch to only open a specified number at a time")
+			continueWithoutBatch := prompter.YN("Do you want to continue without --batch?", false)
+			if !continueWithoutBatch {
+				os.Exit(0)
+			}
+		}
 
 		al := cli.AddLabels{
 			Labels:     labels,
@@ -46,6 +66,7 @@ var labelCmd = &cobra.Command{
 		err := al.AddLabelsToIssues()
 		if err != nil {
 			c.Error.Printf("running label: %v", err)
+			os.Exit(1)
 		}
 
 	},
