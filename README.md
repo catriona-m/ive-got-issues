@@ -4,7 +4,7 @@ This is a command-line tool for dealing with GitHub issues. This is intended to 
 
 It can automatically `label` or `comment` all issues in a specified repo that match the criteria input via the flags. These have a dry-run mode and the option to open a browser tab for each matching issue for users who prefer to double-check matching issues before commenting/labelling. 
 
-It can `list` all issues in a specified repo that match the criteria input via the flags. This also has the option to list issues with `--linked-prs` (pull requests that have referenced the issues), which can help identify stale issues that are ready to close. `list` can also optionally open issues in browser tabs.
+It can `list` all issues in a specified repo that match the criteria input via the flags. This also has the option to list issues with `--linked-prs` (pull requests that have referenced the issues), which can help identify stale issues that are ready to close. `list` can also optionally open issues and linked prs in browser tabs.
 
 ive-got-issues is still a work in progress with more flags and commands to come in future!
 
