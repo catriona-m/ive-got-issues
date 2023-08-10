@@ -23,7 +23,7 @@ Adds labels to issues that match the filtering criteria
 
 - Add a label to any issue where the body of the issue text matches the regex passed to --content flag:
 ```
-ive-got-issues labels --gh-repo "catriona-m/ive-got-issues" --labels "v2" --content "Version=(|v)2\..[0-9]*\..[0-9]*" --state "open"
+ive-got-issues label --gh-repo "catriona-m/ive-got-issues" --labels "v2" --content "Version=(|v)2\..[0-9]*\..[0-9]*" --state "open"
 ```
 
 ## comment
