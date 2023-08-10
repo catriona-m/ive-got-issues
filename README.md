@@ -6,11 +6,12 @@ It can automatically `label` or `comment` all issues in a specified repo that ma
 
 It can `list` all issues in a specified repo that match the criteria input via the flags. This also has the option to list issues with `--linked-prs` (pull requests that have referenced the issues), which can help identify stale issues that are ready to close. `list` can also optionally open issues in browser tabs.
 
-ive-got-issues 
+ive-got-issues is still a work in progress with more flags and commands to come in future!
 
 ## Installation
 
 To install ive-got-issues from the command line, you can run:
+
 `go install catriona-m/ive-got-issues`
 
 ## Commands
